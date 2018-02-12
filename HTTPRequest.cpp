@@ -1,4 +1,4 @@
-#include "HTTPRequest.hpp";
+#include "HTTPRequest.hpp"
 
 class HTTPRequest : public HTTPMessage {
 private:

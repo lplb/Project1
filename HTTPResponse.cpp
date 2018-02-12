@@ -1,4 +1,4 @@
-#include <stoi>
+#include "HTTPResponse.hpp"
 
 class HTTPRequest : public HTTPMessage {
 private:
@@ -61,6 +61,8 @@ public:
                 message += CRLF;
 
                 message += messageBody;
+
+                message += CRLF + CRLF;
 
                 std::vector<uint8_t> wire(message.begin(), message.end());
 

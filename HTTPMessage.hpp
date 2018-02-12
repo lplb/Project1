@@ -9,7 +9,7 @@ protected:
         
         static const std::string SP = " ";
         
-        static const std::string CRLF = "\r\l";
+        static const std::string CRLF = "\r\n";
 
 public:
         virtual void consume(std::vector<uint8_t> wire);
