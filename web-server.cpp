@@ -41,6 +41,7 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 //    std::stringstream ss;
     std::string message = "";
 
+    std::cout << "Receiving..." << std::endl;
     while (!isEnd) {
         memset(buf, '\0', sizeof(buf));
 
@@ -56,9 +57,13 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
     }
 
+    std::cout << "Request received" << std::endl;
+
     HTTPRequest req;
     std::vector<uint8_t> wire(message.begin(), message.end());
     req.consume(wire);
+
+    std::cout << "Creating response" << std::endl;
 
     HTTPResponse resp;
 
@@ -82,8 +87,11 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
     ssize_t bytesToSend = codedResp.size();
     uint8_t* sendBuffer;
 
+    std::cout << "Sending response..." << std::endl;
+
     while (totBytesSent < bytesToSend) {
         sendBuffer = &codedResp[totBytesSent];
+        std::cout << sendBuffer << std::endl;
         ssize_t bytesSent = send(clientSockfd, sendBuffer, buffSize, 0);
         if (bytesSent == -1) {
             perror("send");
@@ -93,6 +101,8 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
         totBytesSent += bytesSent;
     }
 
+    std::cout << "Response sent" << std::endl;
+
     close(clientSockfd);
 }
 
@@ -100,13 +110,18 @@ int main(int argc, char* argv[]) {
 
     static const size_t BUFF_SIZE = 1024;
 
-    if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " hostname port file-dir" << std::endl;
-        return 1;
+    const char* hostname = "localhost";
+    const char* port = "4000";
+    const char* fileDir = ".";
+    if (argc > 1) {
+        hostname  = argv[1];
+        if (argc > 2) {
+            port = argv[2];
+            if (argc > 3) {
+                fileDir = argv[3];
+            }
+        }
     }
-    const char* hostname = argv[1];
-    const char* port = argv[2];
-    const char* fileDir = argv[3];
 
     struct addrinfo hints, *res, *info;
     int rv;
