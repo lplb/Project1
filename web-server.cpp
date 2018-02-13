@@ -2,17 +2,34 @@
 #include <thread>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <sys/stat.h>
+
 #include "HTTPRequest.hpp"
 #include "HTTPResponse.hpp"
 
+#define BACKLOG 10
 
-void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize){
+
+
+/**
+ * Source: https://techoverflow.net/2013/08/21/how-to-check-if-file-exists-using-stat/?q=/blog/2013/08/21/how-to-check-if-file-exists-using-stat/
+ *
+ * Check if a file exists
+ * @return true if and only if the file exists, false else
+ */
+bool fileExists(const std::string& file) {
+    struct stat buf;
+    return (stat(file.c_str(), &buf) == 0);
+}
+
+void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize, const char* fileDir){
     char ipstr[INET_ADDRSTRLEN] = {'\0'};
     inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
     std::cout << "Accept a connection from: " << ipstr << ":" <<
@@ -20,7 +37,7 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize)
 
     // read/write data from/into the connection
     bool isEnd = false;
-    char buf[buffSize] = {0};
+    char buf[buffSize];
 //    std::stringstream ss;
     std::string message = "";
 
@@ -40,20 +57,34 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize)
     }
 
     HTTPRequest req;
-    req.consume(message);
-
+    std::vector<uint8_t> wire(message.begin(), message.end());
+    req.consume(wire);
 
     HTTPResponse resp;
 
-    //switch for resp.setStatus() and setMessageBody()
+    std::string url = req.getURL();
+    if (url == "/")
+        url = "/index.html";
+    std::string file = fileDir + url;
+
+    if (fileExists(file)) {
+        resp.setStatus(200);
+        std::ifstream ifs(file);
+        std::string messageBody((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
+        resp.setMessageBody(messageBody);
+    } else {
+        resp.setStatus(404);
+        resp.setMessageBody("");
+    }
 
     std::vector<uint8_t> codedResp = resp.encode();
-    int totBytesSent = 0;
-    size_t bytesToSend = codedResp.size();
+    ssize_t totBytesSent = 0;
+    ssize_t bytesToSend = codedResp.size();
+    uint8_t* sendBuffer;
 
     while (totBytesSent < bytesToSend) {
-        buf(codedResp.begin() + totBytesSent, codedResp.begin() + totBytesSent + buffSize);
-        size_t bytesSent = send(clientSockfd, buf, buffSize, 0);
+        sendBuffer = &codedResp[totBytesSent];
+        ssize_t bytesSent = send(clientSockfd, sendBuffer, buffSize, 0);
         if (bytesSent == -1) {
             perror("send");
             return;
@@ -66,6 +97,9 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize)
 }
 
 int main(int argc, char* argv[]) {
+
+    static const size_t BUFF_SIZE = 1024;
+
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << " hostname port file-dir" << std::endl;
         return 1;
@@ -135,7 +169,8 @@ int main(int argc, char* argv[]) {
             perror("accept");
             return 4;
         }
-        std::thread t(handleConnection, clientSockfd, clientAddr).detach();
+        std::thread t(handleConnection, clientSockfd, clientAddr, BUFF_SIZE, fileDir);
+        t.detach();
     }
 
     return 0;

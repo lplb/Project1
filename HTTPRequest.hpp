@@ -1,3 +1,6 @@
+#ifndef HTTP_REQUEST_H
+#define HTTP_REQUEST_H
+
 #include "HTTPMessage.hpp"
 
 class HTTPRequest : public HTTPMessage {
@@ -12,8 +15,11 @@ public:
 
         void setURL(std::string url);
 
+        std::string getURL();
+
         void setMethod(std::string method);
 
         std::vector<uint8_t> encode();
 
-}
+};
+#endif

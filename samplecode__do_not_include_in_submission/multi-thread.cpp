@@ -42,7 +42,7 @@ join()
 
 int main(int argc, char *argv[])
 {
-  noJoin();
-  // join();
+//  noJoin();
+  join();
   return 0;
 }

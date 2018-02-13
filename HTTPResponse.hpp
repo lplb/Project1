@@ -1,3 +1,6 @@
+#ifndef HTTP_RESPONSE_H
+#define HTTP_RESPONSE_H
+
 #include "HTTPMessage.hpp"
 
 class HTTPResponse : public HTTPMessage {
@@ -14,8 +17,9 @@ public:
 
         void setStatus(int status);
 
-        void setMessageBody(string messageBody);
+        void setMessageBody(std::string messageBody);
 
         std::vector<uint8_t> encode();
 
-}
+};
+#endif
