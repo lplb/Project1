@@ -19,6 +19,8 @@ public:
 
         void setMethod(std::string method);
 
+        std::string getMethod();
+
         std::vector<uint8_t> encode();
 
 };

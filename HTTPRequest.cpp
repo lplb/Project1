@@ -2,9 +2,9 @@
 
 void HTTPRequest::consume(std::vector<uint8_t> wire) {
         std::string message(wire.begin(), wire.end());
-        size_t curPos = 0;
-        size_t nextPos = message.find(SP, curPos);
-        size_t endPos = message.find(CRLF+CRLF, nextPos);
+        ssize_t curPos = 0;
+        ssize_t nextPos = message.find(SP, curPos);
+        ssize_t endPos = message.find(CRLF+CRLF, nextPos);
 
         if (nextPos == -1 || endPos == -1) {
             this->method = "";
@@ -54,6 +54,10 @@ void HTTPRequest::setURL(std::string url){
 
 void HTTPRequest::setMethod(std::string method){
         this->method = method;
+}
+
+std::string HTTPRequest::getMethod(){
+        return this->method;
 }
 
 std::string HTTPRequest::getURL(){

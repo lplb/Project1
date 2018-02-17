@@ -36,24 +36,25 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
         ntohs(clientAddr.sin_port) << std::endl;
 
     // read/write data from/into the connection
-    bool isEnd = false;
+    ssize_t endHeaders = -1;
     char buf[buffSize];
 //    std::stringstream ss;
     std::string message = "";
 
     std::cout << "Receiving..." << std::endl;
-    while (!isEnd) {
+    while (endHeaders < 0) {
         memset(buf, '\0', sizeof(buf));
 
-        if (recv(clientSockfd, buf, buffSize, 0) == -1) {
+        ssize_t numBytesReceived = recv(clientSockfd, buf, buffSize, 0);
+        if (numBytesReceived == -1) {
             perror("recv");
             return;
         }
 
         message += buf;
         std::cout << buf << std::endl;
-        if (message.substr(message.length()-2) == "\r\n\r\n")
-            isEnd = true;
+
+        endHeaders = message.find("\r\n\r\n");
 
     }
 
@@ -67,7 +68,7 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
     HTTPResponse resp;
 
-    if (resp.getMethod() == "GET") {
+    if (req.getMethod() == "GET") {
         std::string url = req.getURL();
         if (url == "/")
             url = "/index.html";
@@ -78,6 +79,7 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
             std::ifstream ifs(file);
             std::string messageBody((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
             resp.setMessageBody(messageBody);
+            std::cout << messageBody;
         } else {
             resp.setStatus(404);
             resp.setMessageBody("");
@@ -87,6 +89,8 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
         resp.setMessageBody("");
     }
 
+    std::cout << resp.getMessageBody();
+
     std::vector<uint8_t> codedResp = resp.encode();
     ssize_t totBytesSent = 0;
     ssize_t bytesToSend = codedResp.size();
@@ -94,14 +98,16 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
     std::cout << "Sending response..." << std::endl;
 
+    std::cout << &codedResp[0];
+
     while (totBytesSent < bytesToSend) {
         sendBuffer = &codedResp[totBytesSent];
-        std::cout << sendBuffer << std::endl;
         ssize_t bytesSent = send(clientSockfd, sendBuffer, buffSize, 0);
         if (bytesSent == -1) {
             perror("send");
             return;
         }
+        std::cout << bytesSent << "___" << sendBuffer;
 
         totBytesSent += bytesSent;
     }
