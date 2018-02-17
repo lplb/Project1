@@ -9,15 +9,21 @@ private:
         
         std::string messageBody;
         
-        std::string getStatusString();
+        
 
 
 public:
+		std::string getStatusString();
+		
         void consume(std::vector<uint8_t> wire);
 
         void setStatus(int status);
+        
+        int getStatus();
 
         void setMessageBody(std::string messageBody);
+        
+        std::string getMessageBody();
 
         std::vector<uint8_t> encode();
 

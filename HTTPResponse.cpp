@@ -10,7 +10,7 @@ std::string HTTPResponse::getStatusString(){
 
 void HTTPResponse::consume(std::vector<uint8_t> wire) {
         std::string message(wire.begin(), wire.end());
-        size_t curPos = message.find(this->SP, 0);
+        size_t curPos = message.find(this->SP, 0)+1;
         size_t nextPos = message.find(this->SP, curPos);
         size_t endHeadersPos = message.find(this->CRLF+this->CRLF, nextPos);
 
@@ -37,16 +37,23 @@ void HTTPResponse::consume(std::vector<uint8_t> wire) {
 //        this->headers = newHeaders;
         this->headers = message.substr(curPos, endHeadersPos-curPos);
 
-        curPos = nextPos+1;
-        this->messageBody = message.substr(curPos);
+        this->messageBody = message.substr(endHeadersPos);
 }
 
 void HTTPResponse::setStatus(int status){
         this->status = status;
 }
 
+int HTTPResponse::getStatus(){
+		return this->status;
+}
+
 void HTTPResponse::setMessageBody(std::string messageBody){
         this->messageBody = messageBody;
+}
+
+std::string HTTPResponse::getMessageBody(){
+		return this->messageBody;
 }
 
 std::vector<uint8_t> HTTPResponse::encode() {
