@@ -5,14 +5,15 @@ std::string HTTPResponse::getStatusString(){
                 case 200 : return "200" + this->SP + "OK";
                 case 400 : return "400" + this->SP + "Bad request";
                 case 404 : return "404" + this->SP + "Not found";
+                default : return "400" + this->SP + "Bad request";
         }
 }
 
 void HTTPResponse::consume(std::vector<uint8_t> wire) {
         std::string message(wire.begin(), wire.end());
-        size_t curPos = message.find(this->SP, 0)+1;
-        size_t nextPos = message.find(this->SP, curPos);
-        size_t endHeadersPos = message.find(this->CRLF+this->CRLF, nextPos);
+        ssize_t curPos = message.find(this->SP, 0)+1;
+        ssize_t nextPos = message.find(this->SP, curPos);
+        ssize_t endHeadersPos = message.find(this->CRLF+this->CRLF, nextPos);
 
         this->status = std::stoi(message.substr(curPos, nextPos-curPos));
 
@@ -70,8 +71,6 @@ std::vector<uint8_t> HTTPResponse::encode() {
         message += this->CRLF + this->CRLF;
 
         message += this->messageBody;
-
-        message += this->CRLF + this->CRLF;
 
         std::vector<uint8_t> wire(message.begin(), message.end());
 

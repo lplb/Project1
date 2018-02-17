@@ -36,51 +36,58 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
         ntohs(clientAddr.sin_port) << std::endl;
 
     // read/write data from/into the connection
-    bool isEnd = false;
+    ssize_t endHeaders = -1;
     char buf[buffSize];
 //    std::stringstream ss;
     std::string message = "";
 
     std::cout << "Receiving..." << std::endl;
-    while (!isEnd) {
+    while (endHeaders < 0) {
         memset(buf, '\0', sizeof(buf));
 
-        if (recv(clientSockfd, buf, buffSize, 0) == -1) {
+        ssize_t numBytesReceived = recv(clientSockfd, buf, buffSize, 0);
+        if (numBytesReceived == -1) {
             perror("recv");
             return;
         }
 
         message += buf;
-        std::cout << buf << std::endl;
-        if (message.substr(message.length()-2) == "\r\n\r\n")
-            isEnd = true;
+        std::cout << buf;
+
+        endHeaders = message.find("\r\n\r\n");
 
     }
 
-    std::cout << "Request received" << std::endl;
+    std::cout << std::endl << "Request received" << std::endl;
 
     HTTPRequest req;
     std::vector<uint8_t> wire(message.begin(), message.end());
     req.consume(wire);
 
-    std::cout << "Creating response" << std::endl;
+    std::cout << std::endl << "Creating response" << std::endl;
 
     HTTPResponse resp;
 
-    std::string url = req.getURL();
-    if (url == "/")
-        url = "/index.html";
-    std::string file = fileDir + url;
+    if (req.getMethod() == "GET") {
+        std::string url = req.getURL();
+        if (url == "/")
+            url = "/index.html";
+        std::string file = fileDir + url;
 
-    if (fileExists(file)) {
-        resp.setStatus(200);
-        std::ifstream ifs(file);
-        std::string messageBody((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
-        resp.setMessageBody(messageBody);
+        if (fileExists(file)) {
+            resp.setStatus(200);
+            std::ifstream ifs(file);
+            std::string messageBody((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
+            resp.setMessageBody(messageBody);
+        } else {
+            resp.setStatus(404);
+            resp.setMessageBody("");
+        }
     } else {
-        resp.setStatus(404);
+        resp.setStatus(400);
         resp.setMessageBody("");
     }
+
 
     std::vector<uint8_t> codedResp = resp.encode();
     ssize_t totBytesSent = 0;
@@ -91,17 +98,20 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
     while (totBytesSent < bytesToSend) {
         sendBuffer = &codedResp[totBytesSent];
-        std::cout << sendBuffer << std::endl;
         ssize_t bytesSent = send(clientSockfd, sendBuffer, buffSize, 0);
         if (bytesSent == -1) {
             perror("send");
             return;
         }
 
+        std::cout << sendBuffer;
+
         totBytesSent += bytesSent;
     }
 
-    std::cout << "Response sent" << std::endl;
+    std::cout << std::endl << "Response sent" << std::endl;
+
+    std::cout << "Closing connexion to client" << std::endl;
 
     close(clientSockfd);
 }
@@ -187,6 +197,8 @@ int main(int argc, char* argv[]) {
         std::thread t(handleConnection, clientSockfd, clientAddr, BUFF_SIZE, fileDir);
         t.detach();
     }
+
+    close(sockfd);
 
     return 0;
 
