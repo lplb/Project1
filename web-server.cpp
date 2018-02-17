@@ -67,18 +67,23 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
     HTTPResponse resp;
 
-    std::string url = req.getURL();
-    if (url == "/")
-        url = "/index.html";
-    std::string file = fileDir + url;
+    if (resp.getMethod() == "GET") {
+        std::string url = req.getURL();
+        if (url == "/")
+            url = "/index.html";
+        std::string file = fileDir + url;
 
-    if (fileExists(file)) {
-        resp.setStatus(200);
-        std::ifstream ifs(file);
-        std::string messageBody((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
-        resp.setMessageBody(messageBody);
+        if (fileExists(file)) {
+            resp.setStatus(200);
+            std::ifstream ifs(file);
+            std::string messageBody((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
+            resp.setMessageBody(messageBody);
+        } else {
+            resp.setStatus(404);
+            resp.setMessageBody("");
+        }
     } else {
-        resp.setStatus(404);
+        resp.setStatus(400);
         resp.setMessageBody("");
     }
 
@@ -187,6 +192,8 @@ int main(int argc, char* argv[]) {
         std::thread t(handleConnection, clientSockfd, clientAddr, BUFF_SIZE, fileDir);
         t.detach();
     }
+
+    close(sockfd);
 
     return 0;
 
