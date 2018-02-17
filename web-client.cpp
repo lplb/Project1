@@ -17,7 +17,7 @@
 
 int main(int argc, char *argv[])
 {
-	static const size_t BUFF_SIZE = 1024;
+	static const ssize_t BUFF_SIZE = 1024;
 
 	size_t currentPos;
 	size_t nextPos;
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 		while (!isEnd) {
 			memset(buf, '\0', sizeof(buf));
 
-			int numBytesReceived = recv(sockfd, buf, BUFF_SIZE, 0);
+			ssize_t numBytesReceived = recv(sockfd, buf, BUFF_SIZE, 0);
 			if (numBytesReceived == -1) {
 				perror("recv");
         	    return 7;
@@ -206,12 +206,10 @@ int main(int argc, char *argv[])
     			break;
     		case 400:
     		case 404:
+    		default:
     			std::cout << response.getStatusString() << std::endl;
     			std::cout << "Exiting." << std::endl;
     			break;
-			default :
-				std::cout << "Undefined error code. Exiting." << std::endl;
-				break;
     	}
 	}
 }
