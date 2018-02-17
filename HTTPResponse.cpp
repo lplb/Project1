@@ -38,7 +38,7 @@ void HTTPResponse::consume(std::vector<uint8_t> wire) {
 //        this->headers = newHeaders;
         this->headers = message.substr(curPos, endHeadersPos-curPos);
 
-        this->messageBody = message.substr(endHeadersPos);
+        this->messageBody = message.substr(endHeadersPos+4);
 }
 
 void HTTPResponse::setStatus(int status){
