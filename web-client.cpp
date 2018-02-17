@@ -15,16 +15,13 @@
 #include "HTTPResponse.hpp"
 
 
-
-
-
 int main(int argc, char *argv[])
 {
 	static const size_t BUFF_SIZE = 1024;
 
 	size_t currentPos;
 	size_t nextPos;
-	std::string host_str, port_str, absPath, url;
+	std::string host_str, port_str, absPath, fileName, url;
 	const char *host_ch, *port_ch;
 	struct addrinfo hints, *result, *iterator;	
 	int sockfd;
@@ -73,12 +70,25 @@ int main(int argc, char *argv[])
 		if (nextPos == std::string::npos) absPath = "/";
 		else absPath = url.substr(nextPos);
 		
+		if (absPath == "/") fileName = "/index.html";
+		else
+		{
+			nextPos = 0;
+			do
+			{	
+				currentPos = nextPos+1;
+				nextPos = absPath.find("/", currentPos);
+				std::cout << nextPos;
+			}while(nextPos != std::string::npos);
+			fileName = absPath.substr(currentPos);
+		}
+		
 	
 		// convert host and port from string to const char*
 		host_ch = host_str.c_str();
 		port_ch = port_str.c_str();
 		
-		std::cout << "host: " << host_ch << std::endl << "port: " << port_ch << std::endl << "abs_path: " << absPath << std::endl;
+		std::cout << "host: " << host_ch << std::endl << "port: " << port_ch << std::endl << "abs_path: " << absPath << std::endl << "filename: " << fileName << std::endl;
 		
 		
 		/*
@@ -136,6 +146,7 @@ int main(int argc, char *argv[])
 		request.setMethod("GET");
 		request.setURL(absPath);
 		
+		
 		std::vector<uint8_t> getRequest = request.encode();
 		ssize_t totBytesSent = 0;
 		ssize_t bytesToSend = getRequest.size();
@@ -166,14 +177,15 @@ int main(int argc, char *argv[])
 		while (!isEnd) {
 			memset(buf, '\0', sizeof(buf));
 
-			size_t numBytesReceived = recv(sockfd, buf, BUFF_SIZE, 0);
+			int numBytesReceived = recv(sockfd, buf, BUFF_SIZE, 0);
 			if (numBytesReceived == -1) {
 				perror("recv");
         	    return 7;
+        	    //isEnd = true;
         	}
 
         	message += buf;
-        	std::cout << buf << std::endl;
+        	std::cout << buf;
         	if (numBytesReceived < BUFF_SIZE)
         	    isEnd = true;
 
@@ -182,19 +194,24 @@ int main(int argc, char *argv[])
     	std::vector<uint8_t> wire(message.begin(), message.end());
     	response.consume(wire);
     	 
-    	std::string filename;
+    	 
     	std::ofstream outfile;
     	switch (response.getStatus())
     	{
     		case 200 :
     			std::cout << response.getStatusString() << std::endl;
-    			filename = "." + absPath;
-    			outfile.open(filename);
+    			
+    			outfile.open(fileName);
     			outfile << response.getMessageBody();
     			break;
+    		case 400:
+    		case 404:
+    			std::cout << response.getStatusString() << std::endl;
+    			std::cout << "Exiting." << std::endl;
+    			break;
 			default :
+				std::cout << "Undefined error code. Exiting." << std::endl;
 				break;
     	}
 	}
-	
 }
