@@ -5,6 +5,7 @@ std::string HTTPResponse::getStatusString(){
                 case 200 : return "200" + this->SP + "OK";
                 case 400 : return "400" + this->SP + "Bad request";
                 case 404 : return "404" + this->SP + "Not found";
+                default : return "400" + this->SP + "Bad request";
         }
 }
 

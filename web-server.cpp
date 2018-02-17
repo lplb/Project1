@@ -52,19 +52,19 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
         }
 
         message += buf;
-        std::cout << buf << std::endl;
+        std::cout << buf;
 
         endHeaders = message.find("\r\n\r\n");
 
     }
 
-    std::cout << "Request received" << std::endl;
+    std::cout << std::endl << "Request received" << std::endl;
 
     HTTPRequest req;
     std::vector<uint8_t> wire(message.begin(), message.end());
     req.consume(wire);
 
-    std::cout << "Creating response" << std::endl;
+    std::cout << std::endl << "Creating response" << std::endl;
 
     HTTPResponse resp;
 
@@ -79,7 +79,6 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
             std::ifstream ifs(file);
             std::string messageBody((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
             resp.setMessageBody(messageBody);
-            std::cout << messageBody;
         } else {
             resp.setStatus(404);
             resp.setMessageBody("");
@@ -89,7 +88,6 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
         resp.setMessageBody("");
     }
 
-    std::cout << resp.getMessageBody();
 
     std::vector<uint8_t> codedResp = resp.encode();
     ssize_t totBytesSent = 0;
@@ -98,8 +96,6 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
     std::cout << "Sending response..." << std::endl;
 
-    std::cout << &codedResp[0];
-
     while (totBytesSent < bytesToSend) {
         sendBuffer = &codedResp[totBytesSent];
         ssize_t bytesSent = send(clientSockfd, sendBuffer, buffSize, 0);
@@ -107,12 +103,15 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
             perror("send");
             return;
         }
-        std::cout << bytesSent << "___" << sendBuffer;
+
+        std::cout << sendBuffer;
 
         totBytesSent += bytesSent;
     }
 
-    std::cout << "Response sent" << std::endl;
+    std::cout << std::endl << "Response sent" << std::endl;
+
+    std::cout << "Closing connexion to client" << std::endl;
 
     close(clientSockfd);
 }
