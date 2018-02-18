@@ -11,34 +11,18 @@ std::string HTTPResponse::getStatusString(){
 
 void HTTPResponse::consume(std::vector<uint8_t> wire) {
         std::string message(wire.begin(), wire.end());
-        ssize_t curPos = message.find(this->SP, 0)+1;
-        ssize_t nextPos = message.find(this->SP, curPos);
-        ssize_t endHeadersPos = message.find(this->CRLF+this->CRLF, nextPos);
+        ssize_t curPos = message.find(this->SP, 0)+1; //start position of the status number
+        ssize_t nextPos = message.find(this->SP, curPos); //end position of the status number
+        ssize_t endHeadersPos = message.find(this->CRLF+this->CRLF, nextPos); //end position of the headers
 
         this->status = std::stoi(message.substr(curPos, nextPos-curPos));
 
-//        std::vector<std::string> newHeaders;
-        curPos = message.find(this->CRLF, nextPos) + 1;
-//        while (nextPos != endHeadersPos) {
-////                nextPos = message.find(":", curPos);
-////                std::string headerName = message.substr(curPos, nextPos-curPos);
-////
-////                curPos = nextPos + 2;
-////                nextPos = message.find(CRLF, curPos);
-////                std::string headerValue = message.substr(curPos, nextPos-curPos);
-////
-////                std::tuple<std::string,std::string> header = std::make_tuple(headerName, headerValue);
-//
-//                nextPos = message.find(CRLF, curPos);
-//                std::string header = message.substr(curPos, nextPos-curPos);
-//
-//                newHeaders.pushBack(header);
-//        }
-//
-//        this->headers = newHeaders;
+        curPos = message.find(this->CRLF, nextPos) + 1;//start position of the headers
         this->headers = message.substr(curPos, endHeadersPos-curPos);
 
+        //start position of the message body is 4 positions after the end of the headers.
         this->messageBody = message.substr(endHeadersPos+4);
+
 }
 
 void HTTPResponse::setStatus(int status){
@@ -62,13 +46,6 @@ std::string HTTPResponse::getMessageBody(){
 
 std::vector<uint8_t> HTTPResponse::encode() {
         std:: string message = this->VERSION + this->SP + this->getStatusString() + this->CRLF;
-
-//        for (std::tuple<std::string,std::string> header = headers.begin(); header != headers.end(); header++) {
-//                message += std::get<0>(header) + ":" + this->SP + std::get<1>(header) + this->CRLF;
-//        }
-//        for (std::string header = headers.begin(); header != headers.end(); ++header) {
-//            message += header + this->CRLF;
-//        }
 
         message += this->headers;
         message += this->CRLF + this->CRLF;

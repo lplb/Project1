@@ -6,7 +6,6 @@
 
 class HTTPMessage {
 protected:
-//        std::vector<std::string> headers;
         std::string headers;
 
         static const std::string VERSION;

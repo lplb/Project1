@@ -153,6 +153,7 @@ int main(int argc, char *argv[])
 		ssize_t bytesToSend = getRequest.size();
 		uint8_t* sendBuffer;
 
+        // Send data until the complete request is sent.
     	while (totBytesSent < bytesToSend)
     	{
         	sendBuffer = &getRequest[totBytesSent];
@@ -164,32 +165,44 @@ int main(int argc, char *argv[])
         	}
         	totBytesSent += bytesSent;
     	}
+
+    	std::cout << "Request sent" << std::endl;
     	
     	
     	/*
     	 * Receive HTTP Response message
     	 */
 
-    	size_t endHeaders = -1;
+    	size_t endHeaders = std::string::npos;
+    	size_t startBody = std::string::npos;
 		bool isEnd = false;
 		char buf[BUFF_SIZE];
 
 		std::string message = "";
 		ssize_t contentLength = std::numeric_limits<ssize_t>::max();
 
-		while (!isEnd && message.length() - endHeaders < contentLength + 4) {
+        // Continue receiving until the server ends the connection, or until receiving a content body with the lenght
+        // specified in the Content-Lenght header.
+		while (!isEnd && message.length() - startBody < contentLength) {
 			memset(buf, '\0', sizeof(buf));
 
 			ssize_t numBytesReceived = recv(sockfd, buf, BUFF_SIZE, 0);
 			if (numBytesReceived == -1) {
-				perror("recv");
-//        	    return 7;
+				std::cout << std::endl << "Connection ended by the server, assuming complete message received." << std::endl;
         	    isEnd = true;
         	}
 
         	message += buf;
-        	endHeaders = message.find("\r\n\r\n");
 
+        	// Obtain the position in the string of the end of the headers if not already obtained. The position of the
+        	// beginning of the message body is then this postion + 4.
+        	if (endHeaders == std::string::npos) {
+        	    endHeaders = message.find("\r\n\r\n");
+        	    startBody = endHeaders + 4;
+        	}
+
+            // If the content lenght has not been obtained, search the current available data for the Content-Lenght
+            // header. If it exists, obtain the value associated with the header.
         	if (contentLength == std::numeric_limits<ssize_t>::max()) {
         	    size_t contentLenghtHeaderStart = message.find(CONTENT_LENGTH_HEADER);
         	    size_t contentLengthHeaderEnd = message.find("\r\n", contentLenghtHeaderStart);
@@ -197,23 +210,24 @@ int main(int argc, char *argv[])
         	        contentLength = std::stoi(message.substr(contentLenghtHeaderStart + CONTENT_LENGTH_HEADER.length(), contentLengthHeaderEnd - contentLenghtHeaderStart));
         	    }
         	}
-
-
-        	std::cout << buf;
-//        	if (numBytesReceived < BUFF_SIZE)
-//        	    isEnd = true;
-
     	}
+
+
+    	if (message.length() - startBody >= contentLength) {
+    	    std::cout << std::endl << "Complete message received." << std::endl;
+    	}
+
+        // Create response object.
     	HTTPResponse response;
     	std::vector<uint8_t> wire(message.begin(), message.end());
     	response.consume(wire);
     	 
-    	 
+    	// Handle response object.
     	std::ofstream outfile;
     	switch (response.getStatus())
     	{
     		case 200 :
-    			std::cout << response.getStatusString() << std::endl;
+    			std::cout << response.getStatusString() << std::endl << std::endl;
     			
     			outfile.open(fileName);
     			outfile << response.getMessageBody();
@@ -221,7 +235,7 @@ int main(int argc, char *argv[])
     		case 400:
     		case 404:
     		default:
-    			std::cout << response.getStatusString() << std::endl;
+    			std::cout << response.getStatusString() << std::endl << std::endl;
     			std::cout << "Exiting." << std::endl;
     			break;
     	}

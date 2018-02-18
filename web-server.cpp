@@ -19,7 +19,7 @@
 
 
 /**
- * Source: https://techoverflow.net/2013/08/21/how-to-check-if-file-exists-using-stat/?q=/blog/2013/08/21/how-to-check-if-file-exists-using-stat/
+ * Source for this method: https://techoverflow.net/2013/08/21/how-to-check-if-file-exists-using-stat/?q=/blog/2013/08/21/how-to-check-if-file-exists-using-stat/
  *
  * Check if a file exists
  * @return true if and only if the file exists, false else
@@ -35,14 +35,14 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
     std::cout << "Accept a connection from: " << ipstr << ":" <<
         ntohs(clientAddr.sin_port) << std::endl;
 
-    // read/write data from/into the connection
-    ssize_t endHeaders = -1;
+    size_t endHeaders = std::string::npos;
     char buf[buffSize];
-//    std::stringstream ss;
     std::string message = "";
 
     std::cout << "Receiving..." << std::endl;
-    while (endHeaders < 0) {
+
+   // Continue receiving until the "\r\n\r\n" delimiting the end of the headers has been received.
+    while (endHeaders == std::string::npos) {
         memset(buf, '\0', sizeof(buf));
 
         ssize_t numBytesReceived = recv(clientSockfd, buf, buffSize, 0);
@@ -52,7 +52,6 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
         }
 
         message += buf;
-        std::cout << buf;
 
         endHeaders = message.find("\r\n\r\n");
 
@@ -60,6 +59,7 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
     std::cout << std::endl << "Request received" << std::endl;
 
+    // Handle received request and construct response
     HTTPRequest req;
     std::vector<uint8_t> wire(message.begin(), message.end());
     req.consume(wire);
@@ -83,7 +83,7 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
             resp.setStatus(404);
             resp.setMessageBody("");
         }
-    } else {
+    } else { // Methods other than GET are not supported
         resp.setStatus(400);
         resp.setMessageBody("");
     }
@@ -96,6 +96,7 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
     std::cout << "Sending response..." << std::endl;
 
+    // Send data until the complete response is sent.
     while (totBytesSent < bytesToSend) {
         sendBuffer = &codedResp[totBytesSent];
         ssize_t bytesSent = send(clientSockfd, sendBuffer, buffSize, 0);
@@ -103,8 +104,6 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
             perror("send");
             return;
         }
-
-        std::cout << sendBuffer;
 
         totBytesSent += bytesSent;
     }
@@ -118,7 +117,8 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
 int main(int argc, char* argv[]) {
 
-    static const size_t BUFF_SIZE = 10;
+    // Size of the buffers used to receive and send data.
+    static const size_t BUFF_SIZE = 1024;
 
     const char* hostname = "localhost";
     const char* port = "4000";
@@ -133,6 +133,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Obtain the information needed to bind a socket
     struct addrinfo hints, *res, *info;
     int rv;
     int sockfd;
@@ -146,13 +147,8 @@ int main(int argc, char* argv[]) {
     }
     // loop through all the results and bind to the first we can
     for(info = res; info != NULL; info = info->ai_next) {
-        char str[INET_ADDRSTRLEN];
 
-        // now get it back and print it
-        inet_ntop(AF_INET, &(info->ai_addr->sa_data), str, INET_ADDRSTRLEN);
-        printf("IP: %s\n", str);
         sockfd = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
-        printf("socket %i\n", sockfd);
         if (sockfd == -1) {
             perror("socket");
             continue;
@@ -164,8 +160,14 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
+        char str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(info->ai_addr->sa_data), str, INET_ADDRSTRLEN);
+
+        std::cout << "Socket created with socket descriptor " << sockfd << ", bound to address " << str << std::endl;
+
         break; // if we get here, we must have connected successfully
     }
+
 
 
     if (info == NULL) {
@@ -174,9 +176,10 @@ int main(int argc, char* argv[]) {
         exit(2);
     }
 
-    freeaddrinfo(res); // all done with this structure
+    // free memory allocated to result liked list
+    freeaddrinfo(res);
 
-    // set socket to listen status
+    // Set socket to listen status
     if (listen(sockfd, BACKLOG) == -1) {
         perror("listen");
         return 3;
@@ -185,13 +188,13 @@ int main(int argc, char* argv[]) {
     printf("Listening for clients\n");
 
     for(;;) {
-        // accept a new connection
+        // Accept a new connection, then start a new thread for it.
         struct sockaddr_in clientAddr;
         socklen_t clientAddrSize = sizeof(clientAddr);
         int clientSockfd = accept(sockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
 
         if (clientSockfd == -1) {
-            perror("accept");
+            perror("accept"); //could not accept connection
             return 4;
         }
         std::thread t(handleConnection, clientSockfd, clientAddr, BUFF_SIZE, fileDir);

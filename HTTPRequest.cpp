@@ -3,10 +3,10 @@
 void HTTPRequest::consume(std::vector<uint8_t> wire) {
         std::string message(wire.begin(), wire.end());
         ssize_t curPos = 0;
-        ssize_t nextPos = message.find(SP, curPos);
-        ssize_t endPos = message.find(CRLF+CRLF, nextPos);
+        ssize_t nextPos = message.find(SP, curPos); // End position of the part of the wire corresponding to the method
+        ssize_t endPos = message.find(CRLF+CRLF, nextPos); // End position of the request (since there is no message body)
 
-        if (nextPos == -1 || endPos == -1) {
+        if (nextPos == -1 || endPos == -1) { // If none of these positions are found
             this->method = "";
             this->url = "";
             this->headers = "";
@@ -15,36 +15,17 @@ void HTTPRequest::consume(std::vector<uint8_t> wire) {
 
         this->method = message.substr(curPos, nextPos-curPos);
 
-        curPos = nextPos + 1;
-        nextPos = message.find(SP, curPos);
+        curPos = nextPos + 1; // Start position of the part of the wire corresponding to the URL
+        nextPos = message.find(SP, curPos); // End position of the part of the wire corresponding to the URL
 
-        if (nextPos == -1) {
+        if (nextPos == -1) { // If the end position of the URL is not found
             this->url = "";
         }
 
         this->url = message.substr(curPos, nextPos-curPos);
 
-//        std::vector<std::tuple<std::string, std::string>> newHeaders;
-//        std::vector<std::string> newHeaders;
-        curPos = message.find(CRLF, nextPos) + 1;
+        curPos = message.find(CRLF, nextPos) + 1; // Start position of the part of the wire corresponding to the headers
 
-//        while (nextPos != endPos) {
-////                nextPos = message.find(":", curPos);
-////                std::string headerName = message.substr(curPos, nextPos-curPos);
-////
-////                curPos = nextPos + 2;
-////                nextPos = message.find(CRLF, curPos);
-////                std::string headerValue = message.substr(curPos, nextPos-curPos);
-////
-////                std::tuple<std::string,std::string> header = std::make_tuple(headerName, headerValue);
-//
-//                nextPos = message.find(CRLF, curPos);
-//                std::string header = message.substr(curPos, nextPos-curPos);
-//
-//                newHeaders.pushBack(header);
-//        }
-//
-//        this->headers = newHeaders;
         this->headers = message.substr(curPos, endPos-curPos);
 }
 
@@ -66,12 +47,6 @@ std::string HTTPRequest::getURL(){
 
 std::vector<uint8_t> HTTPRequest::encode() {
         std:: string message = this->method + this->SP + this->url + this->SP + this->VERSION + this->CRLF;
-//        for (std::tuple<std::string,std::string> header = headers.begin(); header != headers.end(); header++) {
-//                message += std::get<0>(header) + ":" + this->SP + std::get<1>(header) + this->CRLF;
-//        }
-//        for (std::string header = headers.begin(); header != headers.end(); ++header) {
-//            message += header + this->CRLF;
-//        }
         message += this->headers;
         message += this->CRLF + this->CRLF;
 

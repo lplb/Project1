@@ -9,8 +9,6 @@ private:
         int status;
         
         std::string messageBody;
-        
-        
 
 
 public:
