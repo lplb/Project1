@@ -2,6 +2,7 @@
 #define HTTP_RESPONSE_H
 
 #include "HTTPMessage.hpp"
+#include <sstream>
 
 class HTTPResponse : public HTTPMessage {
 private:

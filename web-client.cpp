@@ -18,6 +18,7 @@
 int main(int argc, char *argv[])
 {
 	static const ssize_t BUFF_SIZE = 1024;
+	static const std::string CONTENT_LENGTH_HEADER = "Content-Length: ";
 
 	size_t currentPos;
 	size_t nextPos;
@@ -168,26 +169,39 @@ int main(int argc, char *argv[])
     	/*
     	 * Receive HTTP Response message
     	 */
-    	 
+
+    	size_t endHeaders = -1;
 		bool isEnd = false;
 		char buf[BUFF_SIZE];
 
 		std::string message = "";
+		ssize_t contentLength = std::numeric_limits<ssize_t>::max();
 
-		while (!isEnd) {
+		while (!isEnd && message.length() - endHeaders < contentLength + 4) {
 			memset(buf, '\0', sizeof(buf));
 
 			ssize_t numBytesReceived = recv(sockfd, buf, BUFF_SIZE, 0);
 			if (numBytesReceived == -1) {
 				perror("recv");
-        	    return 7;
-        	    //isEnd = true;
+//        	    return 7;
+        	    isEnd = true;
         	}
 
         	message += buf;
+        	endHeaders = message.find("\r\n\r\n");
+
+        	if (contentLength == std::numeric_limits<ssize_t>::max()) {
+        	    size_t contentLenghtHeaderStart = message.find(CONTENT_LENGTH_HEADER);
+        	    size_t contentLengthHeaderEnd = message.find("\r\n", contentLenghtHeaderStart);
+        	    if (contentLenghtHeaderStart != std::string::npos && contentLengthHeaderEnd != std::string::npos) {
+        	        contentLength = std::stoi(message.substr(contentLenghtHeaderStart + CONTENT_LENGTH_HEADER.length(), contentLengthHeaderEnd - contentLenghtHeaderStart));
+        	    }
+        	}
+
+
         	std::cout << buf;
-        	if (numBytesReceived < BUFF_SIZE)
-        	    isEnd = true;
+//        	if (numBytesReceived < BUFF_SIZE)
+//        	    isEnd = true;
 
     	}
     	HTTPResponse response;

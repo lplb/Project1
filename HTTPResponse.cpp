@@ -51,6 +51,9 @@ int HTTPResponse::getStatus(){
 
 void HTTPResponse::setMessageBody(std::string messageBody){
         this->messageBody = messageBody;
+        std::stringstream temp;
+        temp << "Content-Length:" << this->SP << messageBody.length();
+        this->headers = temp.str();
 }
 
 std::string HTTPResponse::getMessageBody(){

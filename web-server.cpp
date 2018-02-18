@@ -118,7 +118,7 @@ void handleConnection(int clientSockfd, sockaddr_in clientAddr, size_t buffSize,
 
 int main(int argc, char* argv[]) {
 
-    static const size_t BUFF_SIZE = 1024;
+    static const size_t BUFF_SIZE = 10;
 
     const char* hostname = "localhost";
     const char* port = "4000";
